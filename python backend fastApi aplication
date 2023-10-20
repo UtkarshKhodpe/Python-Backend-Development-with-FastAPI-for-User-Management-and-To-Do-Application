@@ -1,0 +1,75 @@
+pip install [all] sqlalchemy databases[sqlite]
+
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.ext.declarative import declarative_base
+from databases import Database
+
+DATABASE_URL = "sqlite:///./test.db"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+database = Database(DATABASE_URL)
+Base = declarative_base()
+
+app = FastAPI()
+
+# Define models
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    password = Column(String)
+    is_active = Column(Boolean, default=True)
+    items = relationship("Todo", back_populates="owner")
+
+class Todo(Base):
+    __tablename__ = "todos"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User", back_populates="items")
+
+# Create tables
+Base.metadata.create_all(bind=engine)
+
+# OAuth2PasswordBearer for authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Authentication function
+def authenticate_user(token: str = Depends(oauth2_scheme)):
+    # Implement your token validation logic here
+    return None
+
+# API routes
+@app.post("/token")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    # Implement your user authentication logic and generate JWT tokens here
+    # Return the token in the response
+
+@app.post("/register")
+async def register(username: str, password: str):
+    # Implement user registration logic here
+    # Hash the password before saving it to the database
+
+@app.get("/profile", response_model=User)
+async def get_user_profile(current_user: User = Depends(authenticate_user)):
+    return current_user
+
+@app.post("/create_todo")
+async def create_todo(todo: Todo, current_user: User = Depends(authenticate_user)):
+    # Implement logic to create a new to-do item and associate it with the current user
+
+@app.get("/todos", response_model=list[Todo])
+async def get_todos(current_user: User = Depends(authenticate_user)):
+    # Implement logic to fetch all to-do items for the current user
+
+@app.put("/update_todo/{todo_id}", response_model=Todo)
+async def update_todo(todo_id: int, todo: Todo, current_user: User = Depends(authenticate_user)):
+    # Implement logic to update a specific to-do item that belongs to the current user
+
+@app.delete("/delete_todo/{todo_id}")
+async def delete_todo(todo_id: int, current_user: User = Depends(authenticate_user)):
+    # Implement logic to delete a specific to-do item that belongs to the current user
